@@ -20,8 +20,7 @@
    
 - Ideas for future additions and modifications:
   - Video processer TMS9919 for low res text and graphics output on NTSC-compatible monitor/TV
-  - Real Time Clock to provide date, time, etc.
-  - Networking capabilities: WiFi?, Ethernet?
+  - FabGL32 VGA as temporary/standalone VGA console output
   - Storage:
     - adding CompactFlash card (using IDE interface)
     - adding SD card (using SPI) 
