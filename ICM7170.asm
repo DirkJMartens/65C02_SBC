@@ -1,3 +1,34 @@
+;
+; ICM7170 Real Time Clock - DIP24 pin-out
+;
+;      +------U------+
+;  WRB | 1        24 | RDB 
+;  ALE | 2        23 | VDD (5V)
+;  CSB | 3        22 | D7
+;   A4 | 4        21 | D6
+;   A3 | 5        20 | D5
+;   A2 | 6        19 | D4
+;   A1 | 7        18 | D3
+;   A0 | 8        17 | D2
+; OscO | 9        16 | D1
+; OscI |10        15 | D0
+; ISrc |11        14 | Vbackup
+; INTB |12        13 | VSS (GND) 
+;      +-------------+
+;
+; Connections to 65C02 SBC system: 
+;    A4..A0 : address bus bits A0..A4  
+;    D7..D0 : data bus bits D7..D0 
+;    RDB/WRB: 
+;    ALE    : 
+;    CSB    : to XCS0 
+;    OscO   : 
+;    OscI   : 
+;    ISrc   : GND
+;    INTB   : interrupt output pin  
+;    VSS/VDD: GND/5V
+;    Vbackup: CR2032 coin battery
+
 ; RTC register definitions 
 RTC_BASE      EQU  $
 RTC_SEC100    EQU  RTC_BASE
@@ -47,6 +78,7 @@ RTC_INIT:
   RTS
 
 RTC_READ_TIME:
+  PHA                       ; save A register on stack 
   LDA  #$0
   STA  RTC_SEC100           ; latch internal time registers 
   LDA  RTC_HRS
@@ -63,6 +95,7 @@ RTC_READ_TIME:
   STA  TIME_CURR_YEAR       ; update year in RAM mem loc
   LDA  RTC_DOW
   STA  TIME_CURR_DOW        ; update day of week in RAM mem loc
+  PLA                       ; restore A register on stack 
   RTS
 
 RTC_SET_TIME:
