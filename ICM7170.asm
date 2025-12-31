@@ -22,7 +22,7 @@
 ;    RDB/WRB: 
 ;    ALE    : 5V (for non-multiplexed buses) 
 ;    CSB    : 
-;    OscO/OscI: crystal with caps (32KHz, 1.048576MHz, 2.097152MHz, 4.194304MHz) 
+;    OscO/OscI: crystal with caps (32KHz, 1.048576MHz (2^20), 2.097152MHz (2^21), 4.194304MHz (2^22)) 
 ;    ISrc   : GND
 ;    INTB   : interrupt output pin  
 ;    VSS/VDD: GND/5V
@@ -30,26 +30,16 @@
 
 ; RTC register definitions 
 RTC_BASE      EQU  $
-RTC_SEC100    EQU  RTC_BASE
-RTC_HRS       EQU  RTC_BASE+0x01
-RTC_MINS      EQU  RTC_BASE+0x02
-RTC_SECS      EQU  RTC_BASE+0x03
-RTC_MON       EQU  RTC_BASE+0x04
-RTC_DoM       EQU  RTC_BASE+0x05
-RTC_YEAR      EQU  RTC_BASE+0x06
-RTC_DoW       EQU  RTC_BASE+0x07
-RTC_ISMR      EQU  RTC_BASE+0x10
-RTC_CMDREG    EQU  RTC_BASE+0x11
-
-; Memory locations in RAM to save/store time 
-TIME_MEM_LOC   EQU  $
-TIME_CURR_HRS  EQU  RTC_MEM_LOC
-TIME_CURR_MINS EQU  RTC_MEM_LOC+1
-TIME_CURR_SECS EQU  RTC_MEM_LOC+2
-TIME_CURR_MON  EQU  RTC_MEM_LOC+3
-TIME_CURR_DOM  EQU  RTC_MEM_LOC+4
-TIME_CURR_YEAR EQU  RTC_MEM_LOC+5
-TIME_CURR_DOW  EQU  RTC_MEM_LOC+6
+RTC_SEC100    EQU  (RTC_BASE     )        ; 0..99
+RTC_HRS       EQU  (RTC_BASE+0x01)        ; 1..12 (+80 for PM) or 0..23
+RTC_MINS      EQU  (RTC_BASE+0x02)        ; 0..59
+RTC_SECS      EQU  (RTC_BASE+0x03)        ; 0..59
+RTC_MON       EQU  (RTC_BASE+0x04)        ; 1..12
+RTC_DoM       EQU  (RTC_BASE+0x05)        ; 1..31
+RTC_YEAR      EQU  (RTC_BASE+0x06)        ; 0..99
+RTC_DoW       EQU  (RTC_BASE+0x07)        ; 0..6 (Sun..Sat)
+RTC_ISMR      EQU  (RTC_BASE+0x10)        ; Interrupt Status and Mask Register 
+RTC_CMDREG    EQU  (RTC_BASE+0x11)        ; Command Register 
 
 ; bit definitions
 bit7          EQU  (1<<7)
@@ -59,18 +49,29 @@ bit4          EQU  (1<<4)
 bit3          EQU  (1<<3)
 bit2          EQU  (1<<2)
 bit1          EQU  (1<<1)
-bit0          EQU  (1)
+bit0          EQU  (1<<0)
 
 ; RTC Interrupt Status and Mask Register definitions 
 ; bits6 and 7 of RTC_ISMR are not used 
-RTC_ISMR_TEST  EQU  (RTC_ISMR | bit5)  
-RTC_ISMR_IE    EQU  (RTC_ISMR | bit4)
-RTC_ISMR_RUN   EQU  (RTC_ISMR | bit3)  
-RTC_ISMR_24HR  EQU  (RTC_ISMR | bit2) 
-RTC_ISMR_4MHZ  EQU  (RTC_ISMR | bit1 | bit0) 
-RTC_ISMR_2MHz  EQU  (RTC_ISMR | bit1)
-RTC_ISMR_1MHz  EQU  (RTC_ISMR | bit0) 
-RTC_ISMR_32K   EQU  (RTC_ISMR)
+RTC_ISMR_TEST  EQU  (RTC_ISMR | bit5)          ; 0 = normal mode / 1 = test mode 
+RTC_ISMR_IE    EQU  (RTC_ISMR | bit4)          ; 0 = interrupt disable / 1 = interr enable 
+RTC_ISMR_RUN   EQU  (RTC_ISMR | bit3)          ; 0 = stop mode / 1 = run mode 
+RTC_ISMR_24HR  EQU  (RTC_ISMR | bit2)          ; 0 = 12 hr mode / 1 = 24 hr mode 
+RTC_ISMR_4MHZ  EQU  (RTC_ISMR | bit1 | bit0)   ; 11 = 4 MHz
+RTC_ISMR_2MHz  EQU  (RTC_ISMR | bit1)          ; 10 = 2 MHz 
+RTC_ISMR_1MHz  EQU  (RTC_ISMR | bit0)          ; 01 = 1 MHz
+RTC_ISMR_32K   EQU  (RTC_ISMR)                 ; 00 = 32 KHz 
+
+; Memory locations in RAM to save/store time 
+; This allows any application to access date and time  
+TIME_MEM_LOC   EQU  $
+TIME_CURR_HRS  EQU  (RTC_MEM_LOC  )
+TIME_CURR_MINS EQU  (RTC_MEM_LOC+1)
+TIME_CURR_SECS EQU  (RTC_MEM_LOC+2)
+TIME_CURR_MON  EQU  (RTC_MEM_LOC+3)
+TIME_CURR_DOM  EQU  (RTC_MEM_LOC+4)
+TIME_CURR_YEAR EQU  (RTC_MEM_LOC+5)
+TIME_CURR_DOW  EQU  (RTC_MEM_LOC+6)
 
 ; RTC subroutines 
 RTC_INIT: 
