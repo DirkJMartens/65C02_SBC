@@ -17,13 +17,12 @@
 ;      +-------------+
 ;
 ; Connections to 65C02 SBC system: 
-;    A4..A0 : address bus bits A0..A4  
+;    A4..A0 : address bus bits A0..A4 
 ;    D7..D0 : data bus bits D7..D0 
 ;    RDB/WRB: 
-;    ALE    : 
-;    CSB    : to XCS0 
-;    OscO   : 
-;    OscI   : 
+;    ALE    : 5V (for non-multiplexed buses) 
+;    CSB    : 
+;    OscO/OscI: crystal with caps (32KHz, 1.048576MHz, 2.097152MHz, 4.194304MHz) 
 ;    ISrc   : GND
 ;    INTB   : interrupt output pin  
 ;    VSS/VDD: GND/5V
