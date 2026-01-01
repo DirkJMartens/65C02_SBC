@@ -105,13 +105,18 @@ RTC_SECDIV100_INT:
   RTS
 
 RTC_SECDIV10_INT:
-  RTS
+  PHA
+    LDA #$00                ; write $00 to IR
+    STA RTC_IR              ; to clear all interrupts
+    LDA #RTC_CR             ; get current Interr Reg bits
+    ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
+    STA RTC_CR              ; set new command register bits 
+    LDA #(RTC_SEC10INT)     ; turn 0.1 sec interrupts on 
+    STA RTC_IR              ; the INTB pin 
+  PLA 
+RTS
 
 RTC_SEC_INT:
-;  // setup RTC for INTB output for periodic 1 sec interrupts 
-;  writeRegister(RTC_ISMR, 0x00);                          // clear all interrupts 
-;  writeRegister(RTC_CMD_REG, 0b00011111);                 // 00/norm=0/int en=1/run=1/24 hr mode=1/32k-1M-2M-4M=00..11 
-;  writeRegister(RTC_ISMR, 0x04);                          // turn on 1 sec periodic interrupt bit
   PHA
     LDA #$00                ; write $00 to IR
     STA RTC_IR              ; to clear all interrupts
@@ -132,65 +137,59 @@ RTC_HR_INT:
 RTC_DAY_INT:
   RTS
 
-
-void ignore(void) {
-  // Sketch to test / program the ICM7170 RTC chip to set day/time and configure other features. 
-  // ICM7170 is on small breadboard on top of Mega shield. 
-  // ALE is tied to Vdd (5V) and CSB is tied to Vss (GND) 
-  // INTsrc is tied low (Vss)  
-  // WRB = D6, RDB = D7, INTB = D5 
-  // Address pins = PORTL (A0–A5 on PL0–PL4, Mega2560 pins D49..45)
-  // Data pins = PORTC (D0–D7 on PC0–PC7, Mega2560 pins D37..D30)
-  // Xtal (32K, 1M, 2M or 4M) between pins 9 and 10, each with 12pF to Vdd (5V) (Not GND as per usual)
-  // For testing on breadboard, a daughterboard is used. 9/10 is Xtal, A12 is Vdd. 
-  // 
-  //     D7  5V  D30 D31 D32 D33 D34 D35 D36 D37     GND
-  // 
-  //     24  23  22  21  20  19  18  17  16  15  14  13 
-  //    +------------------------------------------------+
-  //    |RDB Vdd D7  D6  D5  D4  D3  D2  D1  D0 Vbu Vss  |
-  //    >                                                |
-  //    |WRB ALE CSB A4  A3  A2  A1  A0  Oo  Oi INTs INTB|
-  //    +------------------------------------------------+
-  //      1   2   3   4   5   6   7   8   9  10  11  12 
-  //
-  //     D6  Vdd Vss D45 D46 D47 D48 D49   Xtal Vss  D5
-  //
-  //    PORTC = D0..D7; PORTL = A0..A5 ; ALE = HIGH; CSB = LOW 
-}
-
-// Macros for direct port access
-#define RTC_DATA_PORT       PORTC
-#define RTC_DATA_DDR        DDRC
-#define RTC_DATA_PIN_READ   PINC
-#define RTC_ADDR_PORT       PORTL
-#define RTC_ADDR_DDR        DDRL
-
-// Miscellaneous pins and defines 
-#define RTC_IRQB_PIN        3     // must be an IRQ-enabled pin on the Mega (e.g., 2, 3, etc)
-#define RTC_WRB_PIN         6
-#define RTC_RDB_PIN         7
-#define IRQ_LED             12 
-#define RTC_XTAL_PWR        A13
-
-// ICM7170 RTC internal register addresses
-#define RTC_SEC100      0x00  // 100th seconds (0..99) 
-#define RTC_HRS         0x01  // Hours (0..23 or 1..12 + MSB = 0/1 for AM/PM)
-#define RTC_MINS        0x02  // Minutes (0..59)
-#define RTC_SECS        0x03  // Seconds (0..59)
-#define RTC_MON         0x04  // Month (1..12)
-#define RTC_DOM         0x05  // Day of month (1..31)
-#define RTC_YEAR        0x06  // Year (00.99)
-#define RTC_DOW         0x07  // Day of week (0..6)
-#define RTC_ISMR        0x10  // Interrupt Status and Mask register 
-#define RTC_CMD_REG     0x11  // Command register 
-
-// ICM7170 Command Register bits (write only)
-volatile uint8_t state = LOW; 
-
-// Calendar lookup values 
-const char *DoW[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};                                          // Dow = 0..6 
-const char *MoY[] = { "", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};  // MoY = 1..12 
+RTC_TIME_TO_LCD:
+  PHA
+    LDA #$00                ; col 0
+    LDX #$01                ; row 1 (2nd line) 
+    LCD_SET_CUR_POS         ; go to first char of 2nd line 
+    LDA TIME_CURR_HRS       ; get current hour (1..12 or 0..23) 
+    PHA                     ; push current hours on stack 
+    ASR
+    ASR
+    ASR
+    ASR                     ; get high nibble (tens hrs) 
+    CLC
+    ADC #$41                ; convert to ASCII
+    LCD_SEND_CHAR           ; write tens hrs 
+    PLA                     ; get current hours again (from stack) 
+    AND $0F                 ; mask low nibble (ones hrs)
+    CLC
+    ADC #$41                ; convert to ASCII
+    LCD_SEND_CHAR           ; write units hrs 
+    LDA #':'
+    LCD_SEND_CHAR           ; separating ':' 
+    LDA TIME_CURR_MINS      ; get current mins (0..59) 
+    PHA                     ; push current mins on stack 
+    ASR
+    ASR
+    ASR
+    ASR                     ; get high nibble (mins hrs) 
+    CLC
+    ADC #$41                ; convert to ASCII
+    LCD_SEND_CHAR           ; write tens mins 
+    PLA                     ; get current mins back again (from stack)
+    AND $0F                 ; mask low nibble (ones mins)
+    CLC
+    ADC #$41                ; convert to ASCII
+    LCD_SEND_CHAR           ; write units mins 
+    LDA #':'
+    LCD_SEND_CHAR           ; separating ':' 
+    LDA TIME_CURR_SECS      ; get current secs (0..59) 
+    PHA                     ; push current secs on stack 
+    ASR
+    ASR
+    ASR
+    ASR                     ; get high nibble (tens secs) 
+    CLC
+    ADC #$41                ; convert to ASCII
+    LCD_SEND_CHAR           ; write tens secs 
+    PLA                     ; get current secs back again (from stack) 
+    AND $0F                 ; mask low nibble (ones secs) 
+    CLC
+    ADC #$41                ; convert to ASCII
+    LCD_SEND_CHAR           ; write units secs
+  PLA
+RTS
 
 int day_of_week(int day, int month, int year) {
   // calculate DoW when given a day/month/year using the Tomohiko Sakamoto's algorithm 
@@ -199,12 +198,6 @@ int day_of_week(int day, int month, int year) {
   static const int offset[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
   year -= month < 3;
   return (year + year / 4 - year / 100 + year / 400 + offset[month - 1] + day) % 7;
-}
-
-void RTC_IRQB_ISR(void) {
-  readRegister(RTC_ISMR);                                 // read ISMR to reset the interrupt 
-  // state = !state; 
-  // digitalWrite(IRQ_LED, state); 
 }
 
 void setup() {
@@ -230,40 +223,6 @@ void setup() {
   writeRegister(RTC_ISMR, 0x00);                          // clear all interrupts 
   writeRegister(RTC_CMD_REG, 0b00011111);                 // 00/norm=0/int en=1/run=1/24 hr mode=1/32k-1M-2M-4M=00..11 
   writeRegister(RTC_ISMR, 0x04);                          // turn on 1 sec periodic interrupt bit
-}
-
-void loop() {
-  RTC_Time_to_Serial (); 
-  delay(1000); 
-}
-
-void writeRegister(uint8_t regAddr, uint8_t data) {
-  RTC_ADDR_DDR = 0xFF;                            // Address port as output
-  RTC_ADDR_PORT = regAddr;                        // Place address on port
-  RTC_DATA_DDR = 0xFF;                            // Drive data bus as output
-  RTC_DATA_PORT = data;
-  digitalWrite(RTC_WRB_PIN, LOW);                  // Assert WR (active low)
-  digitalWrite(RTC_WRB_PIN, HIGH);                 // Return data bus high-impedance if needed later
-  RTC_ADDR_DDR = 0x00;                            // Address port as output
-  RTC_ADDR_PORT = 0;
-  RTC_DATA_DDR = 0x00;                            // Initially set DATA as output (for writes)
-  RTC_DATA_PORT = 0;
-}
-
-uint8_t readRegister(uint8_t regAddr) {
-  uint8_t result;
-  RTC_ADDR_DDR = 0xFF;                            // Address port as output
-  RTC_ADDR_PORT = regAddr;                        // Place address on port
-  RTC_DATA_DDR = 0x00;                            // Set data bus to input
-  RTC_DATA_PORT = 0x00;                           // Ensure internal pull-ups off (chip will drive bus)
-  digitalWrite(RTC_RDB_PIN, LOW);                  // Assert RD (active low)
-  result = RTC_DATA_PIN_READ;                     // Read data from data bus
-  digitalWrite(RTC_RDB_PIN, HIGH);                 // De-assert RD
-  RTC_ADDR_DDR = 0x00;                            // Address port as output
-  RTC_ADDR_PORT = 0;
-  RTC_DATA_DDR = 0x00;                            // Initially set DATA as output (for writes)
-  RTC_DATA_PORT = 0;
-  return result;
 }
 
 void RTC_Set_Time(void) {
