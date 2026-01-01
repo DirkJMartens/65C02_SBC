@@ -1,12 +1,24 @@
-	CHIP 65C02
-	TWOCHAR ON
+;	Main assembler file for the BE6502 SBC. 
+;	Prepared to be compiled and linked with WDC's assembler and linker software. 
+;	Compiling/linking and generating the .HEX file is done with the BE6502_create_hex.bat file 
+;	The hex_file.opt file contains the memory layout. 
+;	The LCD.asm file contains the EQU and subroutines to drive a 2x16 LCD in 4 bit mode. 
+;	The ICM7170.asm file contains the same for the real time clock chip. (not yet tested). 
+;	
+; 	
 
-.INCLUDE LCD.ASM
 
-; EQUates			
+	CHIP 65C02			; ensure 65C02-compliant code is generated (CPU is 65C816 in emulation mode) 
+	TWOCHAR ON			; allows using acronyms such as NL, CR, etc. 
+	PW 132				; sets .lst width to 132 chars, with 0..31 used for addresses and opcodes 
+
+.INCLUDE LCD.ASM		; EQUs and subroutines to use an 2x16 LCD module in 4 bit mode 
+
+; EQUates that are system-specific
 ; *******S
 ; CPU definitions 
 HWSTACK			EQU		$FF					; ToS location (grows towards $0000) 
+
 ; bit definitions 
 bit0			EQU		1<<0				; %00000001 = $01
 bit1			EQU		1<<1 				; %00000010 = $02
@@ -16,12 +28,6 @@ bit4			EQU		1<<4 				; %00010000 = $10
 bit5			EQU		1<<5 				; %00100000 = $20
 bit6			EQU		1<<6 				; %01000000 = $40
 bit7			EQU		1<<7  				; %10000000 = $80
-; VIA definitions 
-VIA_BASE		EQU		$6000
-VIA_PORTB		EQU		VIA_BASE
-VIA_PORTA		EQU		VIA_BASE+1
-VIA_DDRB		EQU		VIA_BASE+2
-VIA_DDRA		EQU		VIA_BASE+3
 
 ; ACIA definitions 
 ACIA_BASE		EQU 		$5000			; UART base address 
@@ -31,18 +37,26 @@ ACIA_CMD		EQU 		ACIA_BASE+2		; sets parity, interrupts used, etc
 ACIA_CTRL		EQU 		ACIA_BASE+3		; sets baudrate, stop/start/word length. etc
 ACIA_TX_EMPTY	EQU			1<<4			; ACIA_STAT bit4 = 1/0 for Tx buffer empty/not empty 
 ACIA_RX_FULL	EQU			1<<3			; ACIA_STAT bit3 = 1/0 for Rx buffer full/not full 
+
+; VIA definitions 
+VIA_BASE		EQU		$6000
+VIA_PORTB		EQU		VIA_BASE
+VIA_PORTA		EQU		VIA_BASE+1
+VIA_DDRB		EQU		VIA_BASE+2
+VIA_DDRA		EQU		VIA_BASE+3
+
+; ASCII definitions 
 ESC             EQU			$1B     		; ESC key
 ; *******E
 
 STARTUP SECTION 
 RESETB_handler:			
 ; *******S
+;	this code is the execution point after power on or a hardware reset. 
 					; Setting up the CPU 
-	; CLD					; clear decimal (=BCD) mode 
-	; CLI					; clear interrupt disable (enable interrupts) 
 	SEI					; 78: SEt Interrupt disable 
 	LDX	#HWSTACK		; A2 FF: load ToS location 
-	TXS					; 9A: init SP register 
+	TXS					; 9A: init SP register with it 
 					; Setting up the VIA 
 	LDA	#$FF			; A9 FF: 1 = output; 0 = input
 	STA	VIA_DDRA		; 8D 03 60: make PORTA all outputs 
@@ -50,7 +64,6 @@ RESETB_handler:
 	LDA	#$00			; A9 00: blank LED bit pattern 
 	STA VIA_PORTA		; 8D 01 60: output bit pattern on PORTA
 	STA VIA_PORTB		; 8D 00 60: output bit pattern on PORTB
-
 					; prepare LCD screen for 4-bit mode 
 	LDA #%00000010 		; A9 02: 0/E=0/RS=0/RW=0/high nibble  
 	STA VIA_PORTB		; 8D 00 60
@@ -68,7 +81,7 @@ RESETB_handler:
 	; LDA		#%00010000		; 0=1stop/00=8bits/1=baudrate clk/1111=19200 or 0000=115200 baud
 	; STA		ACIA_CTRL		; configure ACIA 
 	; LDA		#%00001001		; set to 00=no parity/0=parity disable/0=Rx normal mode
-							; ; 10=RTSB=low,no interr/1=IRQB disabled/1=enable Rx 
+								; 10=RTSB=low,no interr/1=IRQB disabled/1=enable Rx 
 	; STA		ACIA_CMD		; ACIA initialized and ready to Rx/Tx 
 
 ;	JSR 	console_boot_msg
@@ -87,7 +100,7 @@ VERSION 	macro
 
 STRINGS SECTION 		
 ; *******S
-;				for LCD messages 
+;	for LCD messages 
 ;					   0000000000111111
 ;		       		   0123456789012345
 MESSAGE1		.byte 'WDC65C02 - v1.0', 'NL' 
@@ -103,12 +116,13 @@ ABORTB_handler:
 NMIB_handler: 			
 ; *******S
 	LDA		#$55				; load test pattern %01010101
-	STA 	VIA_PORTA				; output it on PORTA 
+	STA 	VIA_PORTA			; output it on PORTA 
 	RTI 
 ; *******E
 IRQB_handler: 			
 ; *******S
-	; PHA										; save A register on ToS
+;	ISR to handle IRQs. Can be triggered by ACIA or the RTC. 
+; PHA										; save A register on ToS
 	; PHX										; save X register on ToS
 		; LDA			ACIA_STAT				; reading status auto-clears ACIA IRQ 
 		; LDA			ACIA_DATA				; read ASCII code of byte received 
