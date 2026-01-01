@@ -41,16 +41,6 @@ RTC_DoW       EQU  (RTC_BASE+0x07)        ; 0..6 (Sun..Sat)
 RTC_ISMR      EQU  (RTC_BASE+0x10)        ; Interrupt Status and Mask Register 
 RTC_CMDREG    EQU  (RTC_BASE+0x11)        ; Command Register 
 
-; bit definitions
-bit7          EQU  (1<<7)
-bit6          EQU  (1<<6)
-bit5          EQU  (1<<5)
-bit4          EQU  (1<<4)
-bit3          EQU  (1<<3)
-bit2          EQU  (1<<2)
-bit1          EQU  (1<<1)
-bit0          EQU  (1<<0)
-
 ; RTC Interrupt Status and Mask Register definitions 
 ; bits6 and 7 of RTC_ISMR are not used 
 RTC_ISMR_TEST  EQU  (RTC_ISMR | bit5)          ; 0 = normal mode / 1 = test mode 
@@ -61,6 +51,15 @@ RTC_ISMR_4MHZ  EQU  (RTC_ISMR | bit1 | bit0)   ; 11 = 4 MHz
 RTC_ISMR_2MHz  EQU  (RTC_ISMR | bit1)          ; 10 = 2 MHz 
 RTC_ISMR_1MHz  EQU  (RTC_ISMR | bit0)          ; 01 = 1 MHz
 RTC_ISMR_32K   EQU  (RTC_ISMR)                 ; 00 = 32 KHz 
+
+; RTC comand register definitions
+RTC_ALARMINT   EQU  (RTC_CMDREG | bit0)
+RTC_SEC100INT  EQU  (RTC_CMDREG | bit1)
+RTC_SEC10INT   EQU  (RTC_CMDREG | bit2)
+RTC_1SECINT    EQU  (RTC_CMDREG | bit3)
+RTC_1MININT    EQU  (RTC_CMDREG | bit4)
+RTC_1HOURINT   EQU  (RTC_CMDREG | bit5)
+RTC_1DAYINT    EQU  (RTC_CMDREG | bit6)
 
 ; Memory locations in RAM to save/store time 
 ; This allows any application to access date and time  
@@ -108,7 +107,19 @@ RTC_SECDIV10_INT:
   RTS
 
 RTC_SEC_INT:
-  RTS
+;  // setup RTC for INTB output for periodic 1 sec interrupts 
+;  writeRegister(RTC_ISMR, 0x00);                          // clear all interrupts 
+;  writeRegister(RTC_CMD_REG, 0b00011111);                 // 00/norm=0/int en=1/run=1/24 hr mode=1/32k-1M-2M-4M=00..11 
+;  writeRegister(RTC_ISMR, 0x04);                          // turn on 1 sec periodic interrupt bit
+  PHA
+    LDA #$00                                      ; write $00 to
+    STA RTC_ISMR                                  ; to clear all interrupts
+    LDA #(RTC_ISMR_IE | RTC_ISMR_RUN | RTC_ISMR_24HR | RTC_ISMR_4MHZ)   ;  
+    STA RTC_CMDREG
+    LDA #(RTC_1SECINT)
+    STA RTC_ISMR
+  PLA 
+RTS
 
 RTC_MIN_INT:
   RTS
