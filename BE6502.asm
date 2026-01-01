@@ -34,8 +34,19 @@ ACIA_CMD		EQU 		ACIA_BASE+2		; sets parity, interrupts used, etc
 ACIA_CTRL		EQU 		ACIA_BASE+3		; sets baudrate, stop/start/word length. etc
 ACIA_TX_EMPTY	EQU			bit4			; ACIA_STAT bit4 = 1/0 for Tx buffer empty/not empty 
 ACIA_RX_FULL	EQU			bit3			; ACIA_STAT bit3 = 1/0 for Rx buffer full/not full 
-ACIA_BAUD_115K	EQU			$0
-ACIA_BAUD_		EQU			
+; control register bits 
+ACIA_BAUD_115K	EQU			$0				; highest baudrate of 115200 baud with 1.8432 MHz crystal 
+ACIA_BAUD_19K	EQU			$0F				; 19.2K baud 
+ACIA_BAUD_9600	EQU			$0E				; 9600 baud
+ACIA_BAUD_4800	EQU			(bit3 | bit2) 	; 4800 baud 
+ACIA_BAUD_1200	EQU			(bit3)			; 1200 baud
+ACIA_BAUD_300	EQU			(bit1 | bit2)	; 300 baud
+ACIA_BAUD_50	EQU			(bit1)			; 50 baud
+; command register bits 
+ACIA_STOP2		EQU			(bit7)			; bit7: 1=2 stop bits / 0=1 stop bit
+ACIA_DATA7		EQU			(bit5) 			; 7 bit data words 
+ACIA_DATA6		EQU			(bit6) 			; 6 bit data words 
+ACIA_DATA5		EQU			(bit5 | bit6) 	; 5 bit data words 
 
 ; VIA 65C22 definitions, one port used for LCD display and one port for bar graph  
 VIA_BASE		EQU			$6000
