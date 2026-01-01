@@ -144,13 +144,13 @@ RTC_TIME_TO_LCD:
     LCD_SET_CUR_POS         ; go to first char of 2nd line 
     LDA TIME_CURR_HRS       ; get current hour (1..12 or 0..23) 
     PHA                     ; push current hours on stack 
-    ASR
-    ASR
-    ASR
-    ASR                     ; get high nibble (tens hrs) 
-    CLC
-    ADC #$41                ; convert to ASCII
-    LCD_SEND_CHAR           ; write tens hrs 
+      ASR
+      ASR
+      ASR
+      ASR                     ; get high nibble (tens hrs) 
+      CLC
+      ADC #$41                ; convert to ASCII
+      LCD_SEND_CHAR           ; write tens hrs 
     PLA                     ; get current hours again (from stack) 
     AND $0F                 ; mask low nibble (ones hrs)
     CLC
@@ -160,13 +160,13 @@ RTC_TIME_TO_LCD:
     LCD_SEND_CHAR           ; separating ':' 
     LDA TIME_CURR_MINS      ; get current mins (0..59) 
     PHA                     ; push current mins on stack 
-    ASR
-    ASR
-    ASR
-    ASR                     ; get high nibble (mins hrs) 
-    CLC
-    ADC #$41                ; convert to ASCII
-    LCD_SEND_CHAR           ; write tens mins 
+      ASR
+      ASR
+      ASR
+      ASR                     ; get high nibble (mins hrs) 
+      CLC
+      ADC #$41                ; convert to ASCII
+      LCD_SEND_CHAR           ; write tens mins 
     PLA                     ; get current mins back again (from stack)
     AND $0F                 ; mask low nibble (ones mins)
     CLC
@@ -176,13 +176,13 @@ RTC_TIME_TO_LCD:
     LCD_SEND_CHAR           ; separating ':' 
     LDA TIME_CURR_SECS      ; get current secs (0..59) 
     PHA                     ; push current secs on stack 
-    ASR
-    ASR
-    ASR
-    ASR                     ; get high nibble (tens secs) 
-    CLC
-    ADC #$41                ; convert to ASCII
-    LCD_SEND_CHAR           ; write tens secs 
+      ASR
+      ASR
+      ASR
+      ASR                     ; get high nibble (tens secs) 
+      CLC
+      ADC #$41                ; convert to ASCII
+      LCD_SEND_CHAR           ; write tens secs 
     PLA                     ; get current secs back again (from stack) 
     AND $0F                 ; mask low nibble (ones secs) 
     CLC
@@ -247,15 +247,4 @@ void RTC_Set_Time(void) {
   dow = day_of_week(date, monIdx, year);                  // find DoW using the __DATE__ info (Sun=0..Sat=6) 
   writeRegister(RTC_DOW,  dow);                           // DoW (0..6) 
   writeRegister(RTC_CMD_REG, 0b00011111);                 // activate clock - 00/norm=0/int en=1/run=1/24 hr mode=1/32k-1M-2M-4M=00..11 
-}
-
-void RTC_Time_to_Serial(void) {
-  readRegister(RTC_SEC100);                                         // latch time 
-  Serial.print(DoW[readRegister (RTC_DOW)]);  Serial.print(" ");    // read DoW 
-  Serial.print(MoY[readRegister (RTC_MON)]);  Serial.print(" ");    // read month
-  Serial.print(readRegister (RTC_DOM));       Serial.print(", 20"); // read day of month
-  Serial.print(readRegister (RTC_YEAR));      Serial.print("   ");  // read year
-  Serial.print(readRegister (RTC_HRS));       Serial.print(":");    // read hrs 
-  Serial.print(readRegister (RTC_MINS));      Serial.print(":");    // read mins
-  Serial.print(readRegister (RTC_SECS));      Serial.println();     // read secs 
 }
