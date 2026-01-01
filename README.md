@@ -11,8 +11,8 @@
   - Port A is connected to an 8-LED bar graph, mainly for debugging purposes
   - Port B is connected to an 16 chars x 2 lines LCD display, running in 4-bit mode
   - 65C51 ACIA with a FTDI TTL-RS232-adapter, providing a console for serial comms @ 115.2kBaud
-  - PS2 keyboard with 74ACT14 and 2 x 74HC595
-  - ICM7170 Real Time Clock chip with 4.194304MHz crystal and a backup battery with 32kHz watch crystal 
+  - PS2 keyboard with discrete interface using 74ACT14 and 2 x 74HC595 and a VIA input port. 
+  - ICM7170 Real Time Clock chip with 4.194304MHz crystal and a backup battery with 32kHz watch crystal (Chose this chip over modern I2C version since I found 2 original 1980's and it can be directly interfaced as a memory-mapped I/O device). 
   - Software development is never-ending, but currently working: 
     - BIOS, providing reset and initializing, LCD and ACIA functionality, etc. 
     - WOZMON monitor to view and edit memory content and to run programs 
