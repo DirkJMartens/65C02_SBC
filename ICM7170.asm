@@ -65,13 +65,27 @@ RTC_CR_ALARMINT   EQU  (bit0)
 ; Memory locations in RAM to save/store time 
 ; This allows any application to access date and time  
 TIME_MEM_LOC     EQU   $
-TIME_CURR_HRS    EQU   (RTC_MEM_LOC  )
-TIME_CURR_MINS   EQU   (RTC_MEM_LOC+1)
-TIME_CURR_SECS   EQU   (RTC_MEM_LOC+2)
-TIME_CURR_MON    EQU   (RTC_MEM_LOC+3)
-TIME_CURR_DOM    EQU   (RTC_MEM_LOC+4)
-TIME_CURR_YEAR   EQU   (RTC_MEM_LOC+5)
-TIME_CURR_DOW    EQU   (RTC_MEM_LOC+6)
+TIME_CURR_HRS    EQU   (RTC_MEM_LOC  )    ; 1..12 or 0..23
+TIME_CURR_MINS   EQU   (RTC_MEM_LOC+1)    ; 0..59
+TIME_CURR_SECS   EQU   (RTC_MEM_LOC+2)    ; 0..59
+TIME_CURR_MON    EQU   (RTC_MEM_LOC+3)    ; 1..12
+TIME_CURR_DOM    EQU   (RTC_MEM_LOC+4)    ; 1..31
+TIME_CURR_YEAR   EQU   (RTC_MEM_LOC+5)    ; 0..99
+TIME_CURR_DOW    EQU   (RTC_MEM_LOC+6)    ; 0..6 
+
+DayOfWeek_CALCULATION: 
+  ; // calculate DoW when given a day/month/year using the Tomohiko Sakamoto's algorithm 
+  ; // Input ranges: day=1..31; month=1..12; year=20xx
+  ; // Return range: Sun=0/Mon=1/Tue=2/Wed=3/Thu=4/Fri=5/Sat=6 
+  ; static const int offset[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+  ; year -= month < 3;  //(if month<3 then year=year-1
+  ; return (year + year / 4 - year / 100 + year / 400 + offset[month - 1] + day) % 7;
+  ; Example: Jan 1, 2026: 
+  ; 2025 + 2025/4 - 2025/100 + 2025/400 = 2025 + 506 - 20 + 5 = 2516 
+  ; offset[0] = 0
+  ; day = 1 
+  ; (2516 + 0 + 1) % 7 = 4 --> Thu 
+  RTS
 
 ; RTC subroutines 
 RTC_INIT: 
@@ -79,22 +93,22 @@ RTC_INIT:
 
 RTC_READ_TIME:
   PHA                       ; save A register on stack 
-  LDA  #$0
-  STA  RTC_SEC100           ; latch internal time registers 
-  LDA  RTC_HRS
-  STA  TIME_CURR_HRS        ; update hrs in RAM mem loc
-  LDA  RTC_MINS
-  STA  TIME_CURR_MINS       ; update mins in RAM mem loc
-  LDA  RTC_SECS
-  STA  TIME_CURR_SECS       ; update secs in RAM mem loc
-  LDA  RTC_MON
-  STA  TIME_CURR_MON        ; update month in RAM mem loc
-  LDA  RTC_DOM
-  STA  TIME_CURR_DOM        ; update day of month in RAM mem loc
-  LDA  RTC_YEAR
-  STA  TIME_CURR_YEAR       ; update year in RAM mem loc
-  LDA  RTC_DOW
-  STA  TIME_CURR_DOW        ; update day of week in RAM mem loc
+    LDA  #$0
+    STA  RTC_SEC100           ; latch internal time registers 
+    LDA  RTC_HRS
+    STA  TIME_CURR_HRS        ; update hrs in RAM mem loc
+    LDA  RTC_MINS
+    STA  TIME_CURR_MINS       ; update mins in RAM mem loc
+    LDA  RTC_SECS
+    STA  TIME_CURR_SECS       ; update secs in RAM mem loc
+    LDA  RTC_MON
+    STA  TIME_CURR_MON        ; update month in RAM mem loc
+    LDA  RTC_DOM
+    STA  TIME_CURR_DOM        ; update day of month in RAM mem loc
+    LDA  RTC_YEAR
+    STA  TIME_CURR_YEAR       ; update year in RAM mem loc
+    LDA  RTC_DOW
+    STA  TIME_CURR_DOW        ; update day of week in RAM mem loc
   PLA                       ; restore A register on stack 
   RTS
 
@@ -102,6 +116,15 @@ RTC_SET_TIME:
   RTS
 
 RTC_SECDIV100_INT:
+  PHA
+    LDA #$00                ; write $00 to IR
+    STA RTC_IR              ; to clear all interrupts
+    LDA #RTC_CR             ; get current Interr Reg bits
+    ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
+    STA RTC_CR              ; set new command register bits 
+    LDA #(RTC_CR_SEC100INT) ; turn 0.01 sec interrupts on 
+    STA RTC_IR              ; the INTB pin 
+  PLA 
   RTS
 
 RTC_SECDIV10_INT:
@@ -111,7 +134,7 @@ RTC_SECDIV10_INT:
     LDA #RTC_CR             ; get current Interr Reg bits
     ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
     STA RTC_CR              ; set new command register bits 
-    LDA #(RTC_SEC10INT)     ; turn 0.1 sec interrupts on 
+    LDA #(RTC_CR_SEC10INT)  ; turn 0.1 sec interrupts on 
     STA RTC_IR              ; the INTB pin 
   PLA 
 RTS
@@ -123,18 +146,45 @@ RTC_SEC_INT:
     LDA #RTC_CR             ; get current Interr Reg bits
     ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
     STA RTC_CR              ; set new command register bits 
-    LDA #(RTC_1SECINT)      ; turn 1 sec interrupts on 
+    LDA #(RTC_CR_1SECINT)   ; turn 1 sec interrupts on 
     STA RTC_IR              ; the INTB pin 
   PLA 
 RTS
 
 RTC_MIN_INT:
+  PHA
+    LDA #$00                ; write $00 to IR
+    STA RTC_IR              ; to clear all interrupts
+    LDA #RTC_CR             ; get current Interr Reg bits
+    ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
+    STA RTC_CR              ; set new command register bits 
+    LDA #(RTC_CR_1MININT)   ; turn daily interrupts on 
+    STA RTC_IR              ; the INTB pin 
+  PLA 
   RTS
 
 RTC_HR_INT:
+  PHA
+    LDA #$00                ; write $00 to IR
+    STA RTC_IR              ; to clear all interrupts
+    LDA #RTC_CR             ; get current Interr Reg bits
+    ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
+    STA RTC_CR              ; set new command register bits 
+    LDA #(RTC_CR_1HOURINT)  ; turn daily interrupts on 
+    STA RTC_IR              ; the INTB pin 
+  PLA 
   RTS
 
 RTC_DAY_INT:
+  PHA
+    LDA #$00                ; write $00 to IR
+    STA RTC_IR              ; to clear all interrupts
+    LDA #RTC_CR             ; get current Interr Reg bits
+    ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
+    STA RTC_CR              ; set new command register bits 
+    LDA #(RTC_CR_1DAYINT)   ; turn daily interrupts on 
+    STA RTC_IR              ; the INTB pin 
+  PLA 
   RTS
 
 RTC_TIME_TO_LCD:
