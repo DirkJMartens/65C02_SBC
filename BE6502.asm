@@ -4,13 +4,10 @@
 ;	The hex_file.opt file contains the memory layout. 
 ;	The LCD.asm file contains the EQU and subroutines to drive a 2x16 LCD in 4 bit mode. 
 ;	The ICM7170.asm file contains the same for the real time clock chip. (not yet tested). 
-;	
-; 	
-
 
 	CHIP 65C02			; ensure 65C02-compliant code is generated (CPU is 65C816 in emulation mode) 
 	TWOCHAR ON			; allows using acronyms such as NL, CR, etc. 
-	PW 132				; sets .lst width to 132 chars, with 0..31 used for addresses and opcodes 
+	PW 132				; sets listing file width to 132 chars (0..31 used for addresses and opcodes) 
 
 .INCLUDE LCD.ASM		; EQUs and subroutines to use an 2x16 LCD module in 4 bit mode 
 
@@ -20,16 +17,16 @@
 HWSTACK			EQU		$FF					; ToS location (grows towards $0000) 
 
 ; bit definitions 
-bit0			EQU		1<<0				; %00000001 = $01
-bit1			EQU		1<<1 				; %00000010 = $02
-bit2			EQU		1<<2 				; %00000100 = $04
-bit3			EQU		1<<3 				; %00001000 = $08
-bit4			EQU		1<<4 				; %00010000 = $10
-bit5			EQU		1<<5 				; %00100000 = $20
-bit6			EQU		1<<6 				; %01000000 = $40
-bit7			EQU		1<<7  				; %10000000 = $80
+bit0			EQU		(1<<0)				; %00000001 = $01
+bit1			EQU		(1<<1) 				; %00000010 = $02
+bit2			EQU		(1<<2) 				; %00000100 = $04
+bit3			EQU		(1<<3) 				; %00001000 = $08
+bit4			EQU		(1<<4) 				; %00010000 = $10
+bit5			EQU		(1<<5) 				; %00100000 = $20
+bit6			EQU		(1<<6) 				; %01000000 = $40
+bit7			EQU		(1<<7) 				; %10000000 = $80
 
-; ACIA definitions 
+; ACIA definitions, used for console messages, WOZMON, etc.  
 ACIA_BASE		EQU 		$5000			; UART base address 
 ACIA_DATA		EQU 		ACIA_BASE		; stores send and receive data 
 ACIA_STAT		EQU 		ACIA_BASE+1		; contains Tx/Rx status, error status, overrun/overflow, etc 
@@ -38,7 +35,7 @@ ACIA_CTRL		EQU 		ACIA_BASE+3		; sets baudrate, stop/start/word length. etc
 ACIA_TX_EMPTY	EQU			1<<4			; ACIA_STAT bit4 = 1/0 for Tx buffer empty/not empty 
 ACIA_RX_FULL	EQU			1<<3			; ACIA_STAT bit3 = 1/0 for Rx buffer full/not full 
 
-; VIA definitions 
+; VIA definitions, one port used for LCD display and one port for bar graph  
 VIA_BASE		EQU		$6000
 VIA_PORTB		EQU		VIA_BASE
 VIA_PORTA		EQU		VIA_BASE+1
@@ -122,6 +119,7 @@ NMIB_handler:
 IRQB_handler: 			
 ; *******S
 ;	ISR to handle IRQs. Can be triggered by ACIA or the RTC. 
+; 	Currently only handles ACIA interrupts. 
 ; PHA										; save A register on ToS
 	; PHX										; save X register on ToS
 		; LDA			ACIA_STAT				; reading status auto-clears ACIA IRQ 
@@ -136,7 +134,7 @@ IRQB_handler:
 
 INTERRUPT_VECTORS: SECTION 		
 ; *******S
-				; EMULATION mode / startup interrupts 
+			; 65C02 EMULATION mode / startup interrupts 
 	.word 						; $FFF0,1 - reserved 
 	.word 						; $FFF2,3 - reserved 
 	.word 	COP_handler			; $FFF4,5 - software (co-processor) 
