@@ -26,21 +26,35 @@ bit5			EQU		(1<<5) 				; %00100000 = $20
 bit6			EQU		(1<<6) 				; %01000000 = $40
 bit7			EQU		(1<<7) 				; %10000000 = $80
 
-; ACIA definitions, used for console messages, WOZMON, etc.  
+; ACIA UM6551 definitions, used for console messages, WOZMON, etc.  
 ACIA_BASE		EQU 		$5000			; UART base address 
 ACIA_DATA		EQU 		ACIA_BASE		; stores send and receive data 
 ACIA_STAT		EQU 		ACIA_BASE+1		; contains Tx/Rx status, error status, overrun/overflow, etc 
 ACIA_CMD		EQU 		ACIA_BASE+2		; sets parity, interrupts used, etc 
 ACIA_CTRL		EQU 		ACIA_BASE+3		; sets baudrate, stop/start/word length. etc
-ACIA_TX_EMPTY	EQU			1<<4			; ACIA_STAT bit4 = 1/0 for Tx buffer empty/not empty 
-ACIA_RX_FULL	EQU			1<<3			; ACIA_STAT bit3 = 1/0 for Rx buffer full/not full 
+ACIA_TX_EMPTY	EQU			bit4			; ACIA_STAT bit4 = 1/0 for Tx buffer empty/not empty 
+ACIA_RX_FULL	EQU			bit3			; ACIA_STAT bit3 = 1/0 for Rx buffer full/not full 
+ACIA_BAUD_115K	EQU			$0
+ACIA_BAUD_		EQU			
 
-; VIA definitions, one port used for LCD display and one port for bar graph  
-VIA_BASE		EQU		$6000
-VIA_PORTB		EQU		VIA_BASE
-VIA_PORTA		EQU		VIA_BASE+1
-VIA_DDRB		EQU		VIA_BASE+2
-VIA_DDRA		EQU		VIA_BASE+3
+; VIA 65C22 definitions, one port used for LCD display and one port for bar graph  
+VIA_BASE		EQU			$6000
+VIA_PORTB		EQU			VIA_BASE		; Input/Output Register B 
+VIA_PORTA		EQU			VIA_BASE+1		; Input/Output Register A
+VIA_DDRB		EQU			VIA_BASE+2		; Data Direction Register B 
+VIA_DDRA		EQU			VIA_BASE+3		; Data Direction Register A 
+VIA_T1CL		EQU			VIA_BASE+4		; Timer1 low-order latches/counters
+VIA_T1CH		EQU			VIA_BASE+5		; Timer1 high-order counter 
+VIA_T1LL		EQU			VIA_BASE+6		; Timer1 low-order latches 
+VIA_T1LH		EQU			VIA_BASE+7		; Timer1 high-order latches 
+VIA_T2CL		EQU			VIA_BASE+8		; Timer2 low-order latches/counters 
+VIA_T2CH		EQU			VIA_BASE+9		; Timer2 high-order counter 
+VIA_SR			EQU			VIA_BASE+$A		; shift register 
+VIA_ACR			EQU			VIA_BASE+$B		; Auxiliary control register 
+VIA_PCR			EQU			VIA_BASE+$C		; Peripheral control register 
+VIA_IFR			EQU			VIA_BASE+$D		; Interrupt Flag register 
+VIA_IER			EQU			VIA_BASE+$E		; Interrupt Enable register 
+VIA_PORTA_NH	EQU			VIA_BASE+$F		; As Register 1 but without handshake 
 
 ; ASCII definitions 
 ESC             EQU			$1B     		; ESC key
