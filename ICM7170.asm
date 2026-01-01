@@ -38,39 +38,40 @@ RTC_MON       EQU  (RTC_BASE+0x04)        ; 1..12
 RTC_DoM       EQU  (RTC_BASE+0x05)        ; 1..31
 RTC_YEAR      EQU  (RTC_BASE+0x06)        ; 0..99
 RTC_DoW       EQU  (RTC_BASE+0x07)        ; 0..6 (Sun..Sat)
-RTC_ISMR      EQU  (RTC_BASE+0x10)        ; Interrupt Status and Mask Register 
-RTC_CMDREG    EQU  (RTC_BASE+0x11)        ; Command Register 
+RTC_IR        EQU  (RTC_BASE+0x10)        ; Interrupt Status and Mask Register 
+RTC_CR        EQU  (RTC_BASE+0x11)        ; Command Register 
 
 ; RTC Interrupt Status and Mask Register definitions 
 ; bits6 and 7 of RTC_ISMR are not used 
-RTC_ISMR_TEST  EQU  (RTC_ISMR | bit5)          ; 0 = normal mode / 1 = test mode 
-RTC_ISMR_IE    EQU  (RTC_ISMR | bit4)          ; 0 = interrupt disable / 1 = interr enable 
-RTC_ISMR_RUN   EQU  (RTC_ISMR | bit3)          ; 0 = stop mode / 1 = run mode 
-RTC_ISMR_24HR  EQU  (RTC_ISMR | bit2)          ; 0 = 12 hr mode / 1 = 24 hr mode 
-RTC_ISMR_4MHZ  EQU  (RTC_ISMR | bit1 | bit0)   ; 11 = 4 MHz
-RTC_ISMR_2MHz  EQU  (RTC_ISMR | bit1)          ; 10 = 2 MHz 
-RTC_ISMR_1MHz  EQU  (RTC_ISMR | bit0)          ; 01 = 1 MHz
-RTC_ISMR_32K   EQU  (RTC_ISMR)                 ; 00 = 32 KHz 
+RTC_IR_TEST       EQU  (bit5)          ; 0 = normal mode / 1 = test mode 
+RTC_IR_IE         EQU  (bit4)          ; 0 = interrupt disable / 1 = interr enable 
+RTC_IR_RUN        EQU  (bit3)          ; 0 = stop mode / 1 = run mode 
+RTC_IR_24HR       EQU  (bit2)          ; 0 = 12 hr mode / 1 = 24 hr mode 
+RTC_IR_4MHZ       EQU  (bit1 | bit0)   ; 11 = 4 MHz
+RTC_IR_2MHz       EQU  (bit1)          ; 10 = 2 MHz 
+RTC_IR_1MHz       EQU  (bit0)          ; 01 = 1 MHz
+RTC_IR_32K        EQU  ($0)            ; 00 = 32 KHz 
 
-; RTC comand register definitions
-RTC_ALARMINT   EQU  (RTC_CMDREG | bit0)
-RTC_SEC100INT  EQU  (RTC_CMDREG | bit1)
-RTC_SEC10INT   EQU  (RTC_CMDREG | bit2)
-RTC_1SECINT    EQU  (RTC_CMDREG | bit3)
-RTC_1MININT    EQU  (RTC_CMDREG | bit4)
-RTC_1HOURINT   EQU  (RTC_CMDREG | bit5)
-RTC_1DAYINT    EQU  (RTC_CMDREG | bit6)
+; RTC command register definitions
+; bit7 of RTC Cmd Register is not used
+RTC_CR_1DAYINT    EQU  (bit6)
+RTC_CR_1HOURINT   EQU  (bit5)
+RTC_CR_1MININT    EQU  (bit4)
+RTC_CR_1SECINT    EQU  (bit3)
+RTC_CR_SEC10INT   EQU  (bit2)
+RTC_CR_SEC100INT  EQU  (bit1)
+RTC_CR_ALARMINT   EQU  (bit0)
 
 ; Memory locations in RAM to save/store time 
 ; This allows any application to access date and time  
-TIME_MEM_LOC   EQU  $
-TIME_CURR_HRS  EQU  (RTC_MEM_LOC  )
-TIME_CURR_MINS EQU  (RTC_MEM_LOC+1)
-TIME_CURR_SECS EQU  (RTC_MEM_LOC+2)
-TIME_CURR_MON  EQU  (RTC_MEM_LOC+3)
-TIME_CURR_DOM  EQU  (RTC_MEM_LOC+4)
-TIME_CURR_YEAR EQU  (RTC_MEM_LOC+5)
-TIME_CURR_DOW  EQU  (RTC_MEM_LOC+6)
+TIME_MEM_LOC     EQU   $
+TIME_CURR_HRS    EQU   (RTC_MEM_LOC  )
+TIME_CURR_MINS   EQU   (RTC_MEM_LOC+1)
+TIME_CURR_SECS   EQU   (RTC_MEM_LOC+2)
+TIME_CURR_MON    EQU   (RTC_MEM_LOC+3)
+TIME_CURR_DOM    EQU   (RTC_MEM_LOC+4)
+TIME_CURR_YEAR   EQU   (RTC_MEM_LOC+5)
+TIME_CURR_DOW    EQU   (RTC_MEM_LOC+6)
 
 ; RTC subroutines 
 RTC_INIT: 
@@ -112,12 +113,13 @@ RTC_SEC_INT:
 ;  writeRegister(RTC_CMD_REG, 0b00011111);                 // 00/norm=0/int en=1/run=1/24 hr mode=1/32k-1M-2M-4M=00..11 
 ;  writeRegister(RTC_ISMR, 0x04);                          // turn on 1 sec periodic interrupt bit
   PHA
-    LDA #$00                                      ; write $00 to
-    STA RTC_ISMR                                  ; to clear all interrupts
-    LDA #(RTC_ISMR_IE | RTC_ISMR_RUN | RTC_ISMR_24HR | RTC_ISMR_4MHZ)   ;  
-    STA RTC_CMDREG
-    LDA #(RTC_1SECINT)
-    STA RTC_ISMR
+    LDA #$00                ; write $00 to IR
+    STA RTC_IR              ; to clear all interrupts
+    LDA #RTC_CR             ; get current Interr Reg bits
+    ORA #(RTC_IE | RTC_IR_RUN) ; set Interr En and RTC Run bits 
+    STA RTC_CR              ; set new command register bits 
+    LDA #(RTC_1SECINT)      ; turn 1 sec interrupts on 
+    STA RTC_IR              ; the INTB pin 
   PLA 
 RTS
 
